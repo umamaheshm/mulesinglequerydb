@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="60e0cd8f-7e1b-4b26-b49d-9b316f1d7939" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="f77f4633-34cc-4b90-b458-f558f508e8a0" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="root" database="sakila" >
+			<db:pooling-profile maxPoolSize="5" />
+		</db:my-sql-connection>
+		<expiration-policy />
+	</db:config>
+	<flow name="mulesinglequerydbFlow" doc:id="0e1b847f-0861-4510-8b46-480d8ea6f3df" >
+		<http:listener doc:name="Listener" doc:id="73e0a460-f4a9-4ee4-b9bc-0bb9f0da8275" config-ref="HTTP_Listener_config" path="/select/book/{maxId}" outputMimeType="application/json" allowedMethods="GET"/>
+		<set-variable value="#[[]]" doc:name="Set Variable" doc:id="ac15f814-4513-455f-9503-8dc4f4488acb" variableName="bookCollection"/>
+		<foreach doc:name="For Each" doc:id="d692ae7e-fe79-4f83-9b7e-a50254893330" collection="#[1 to attributes.uriParams.maxId as Number]">
+			<db:query-single doc:name="Query single" doc:id="8d328559-7f11-4dd6-a2fc-737491008f23" config-ref="Database_Config">
+				<db:sql ><![CDATA[SELECT id,title,author FROM BOOK WHERE id=:id]]></db:sql>
+				<db:input-parameters ><![CDATA[#[{'id':payload}]]]></db:input-parameters>
+			</db:query-single>
+			<set-variable value="#[vars.bookCollection ++ [payload]]" doc:name="Set Variable" doc:id="e70ff21b-bfbe-4b6d-993e-6a103245d5fa" variableName="bookCollection"/>
+		</foreach>
+		<set-payload value="#[output application/json --- { books : vars.bookCollection }]" doc:name="Set Payload" doc:id="54ac1477-5744-479a-9bd2-439df46d87f4" />
+	</flow>
+</mule>
